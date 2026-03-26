@@ -29,37 +29,38 @@ Use this skill when the user asks to:
    `python3 scripts/export_codex_chat.py ...`
 3. Prefer Markdown for readable archives and JSON for automation pipelines.
 4. Add `--include-tools` only when tool traces are useful.
+5. For cleaner exports, leave environment stripping on unless the user explicitly wants raw input context.
 
 ## Commands
 
 List recent threads:
 
 ```bash
-python3 scripts/export_codex_chat.py list
+codex-chat-export list
 ```
 
 List as JSON:
 
 ```bash
-python3 scripts/export_codex_chat.py list --json
+codex-chat-export list --json
 ```
 
 Export the latest thread as Markdown to stdout:
 
 ```bash
-python3 scripts/export_codex_chat.py export --latest --format markdown
+codex-chat-export export --latest --format markdown
 ```
 
 Export a matching thread into a directory:
 
 ```bash
-python3 scripts/export_codex_chat.py export --contains 复盘 --format markdown --output exports/
+codex-chat-export export --contains 复盘 --format markdown --output exports/
 ```
 
 Export one thread with tool traces:
 
 ```bash
-python3 scripts/export_codex_chat.py export --id <thread-id> --include-tools --output thread.md
+codex-chat-export export --id <thread-id> --include-tools --output thread.md
 ```
 
 ## Notes

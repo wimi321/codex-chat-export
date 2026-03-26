@@ -1,0 +1,27 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create archive
+        run: |
+          mkdir -p dist
+          zip -r dist/codex-chat-export-skill.zip . \
+            -x "*.git*" \
+            -x "dist/*" \
+            -x "__pycache__/*" \
+            -x "*.pyc"
+
+      - name: Publish GitHub release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/codex-chat-export-skill.zip

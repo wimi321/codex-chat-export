@@ -1,3 +1,25 @@
+Metadata-Version: 2.4
+Name: codex-chat-export
+Version: 0.1.0
+Summary: Export local Codex Desktop conversations as Markdown or JSON.
+Author: haoc
+License: MIT
+Project-URL: Homepage, https://github.com/wimi321/codex-chat-export
+Project-URL: Repository, https://github.com/wimi321/codex-chat-export
+Project-URL: Issues, https://github.com/wimi321/codex-chat-export/issues
+Keywords: codex,chat-export,transcript,skill,openai
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Dynamic: license-file
+
 # codex-chat-export
 
 [![CI](https://github.com/wimi321/codex-chat-export/actions/workflows/ci.yml/badge.svg)](https://github.com/wimi321/codex-chat-export/actions/workflows/ci.yml)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 import subprocess
 import sys
@@ -14,11 +15,14 @@ SCRIPT = ROOT / "scripts" / "export_codex_chat.py"
 
 
 def run(*args: str) -> subprocess.CompletedProcess[str]:
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(ROOT / "src") + os.pathsep + env.get("PYTHONPATH", "")
     return subprocess.run(
         [sys.executable, str(SCRIPT), *args],
         text=True,
         capture_output=True,
         check=True,
+        env=env,
     )
 
 
@@ -243,6 +247,144 @@ class ExportCodexChatTests(unittest.TestCase):
             self.assertIn("导出测试", result.stdout)
             self.assertIn("tool call `exec_command`", result.stdout)
             self.assertIn("已经导出好了。", result.stdout)
+
+    def test_export_strips_environment_context_by_default(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            codex_home = tmp_path / ".codex"
+            sessions_dir = codex_home / "sessions" / "2026" / "03" / "27"
+            sessions_dir.mkdir(parents=True)
+            rollout_path = sessions_dir / "rollout-thread-3.jsonl"
+            rollout_path.write_text(
+                "\n".join(
+                    [
+                        json.dumps(
+                            {
+                                "timestamp": "2026-03-26T16:00:00.000Z",
+                                "type": "session_meta",
+                                "payload": {"id": "thread-3", "cwd": "/tmp/project", "model": "gpt-5.4"},
+                            },
+                            ensure_ascii=False,
+                        ),
+                        json.dumps(
+                            {
+                                "timestamp": "2026-03-26T16:00:01.000Z",
+                                "type": "response_item",
+                                "payload": {
+                                    "type": "message",
+                                    "role": "user",
+                                    "content": [
+                                        {
+                                            "type": "input_text",
+                                            "text": "<environment_context>\n  <cwd>/tmp/project</cwd>\n</environment_context>\n\nhello",
+                                        }
+                                    ],
+                                },
+                            },
+                            ensure_ascii=False,
+                        ),
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            conn = create_threads_db(codex_home / "state_5.sqlite")
+            conn.execute(
+                """
+                INSERT INTO threads (
+                  id, rollout_path, created_at, updated_at, source, model_provider, cwd, title, first_user_message, model, reasoning_effort, archived
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    "thread-3",
+                    str(rollout_path),
+                    1774540000,
+                    1774540100,
+                    "desktop",
+                    "cliproxyapi",
+                    "/tmp/project",
+                    "环境过滤测试",
+                    "hello",
+                    "gpt-5.4",
+                    "medium",
+                    0,
+                ),
+            )
+            conn.commit()
+            conn.close()
+
+            result = run("--codex-home", str(codex_home), "export", "--id", "thread-3")
+            self.assertNotIn("<environment_context>", result.stdout)
+            self.assertIn("hello", result.stdout)
+
+    def test_batch_export_writes_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            codex_home = tmp_path / ".codex"
+            sessions_dir = codex_home / "sessions" / "2026" / "03" / "27"
+            sessions_dir.mkdir(parents=True)
+            conn = create_threads_db(codex_home / "state_5.sqlite")
+
+            for index in (1, 2):
+                rollout_path = sessions_dir / f"rollout-thread-{index}.jsonl"
+                rollout_path.write_text(
+                    "\n".join(
+                        [
+                            json.dumps(
+                                {
+                                    "timestamp": "2026-03-26T16:00:00.000Z",
+                                    "type": "session_meta",
+                                    "payload": {"id": f"thread-{index}", "cwd": "/tmp/project", "model": "gpt-5.4"},
+                                },
+                                ensure_ascii=False,
+                            ),
+                            json.dumps(
+                                {
+                                    "timestamp": "2026-03-26T16:00:01.000Z",
+                                    "type": "response_item",
+                                    "payload": {
+                                        "type": "message",
+                                        "role": "user",
+                                        "content": [{"type": "input_text", "text": f"hello {index}"}],
+                                    },
+                                },
+                                ensure_ascii=False,
+                            ),
+                        ]
+                    )
+                    + "\n",
+                    encoding="utf-8",
+                )
+                conn.execute(
+                    """
+                    INSERT INTO threads (
+                      id, rollout_path, created_at, updated_at, source, model_provider, cwd, title, first_user_message, model, reasoning_effort, archived
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        f"thread-{index}",
+                        str(rollout_path),
+                        1774540000 + index,
+                        1774540100 + index,
+                        "desktop",
+                        "cliproxyapi",
+                        "/tmp/project",
+                        f"thread {index}",
+                        f"hello {index}",
+                        "gpt-5.4",
+                        "medium",
+                        0,
+                    ),
+                )
+            conn.commit()
+            conn.close()
+
+            output_dir = tmp_path / "exports"
+            run("--codex-home", str(codex_home), "export", "--all", "--output", str(output_dir))
+            manifest = json.loads((output_dir / "manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(len(manifest), 2)
+            self.assertTrue((output_dir / "thread-1-thread-1.md").exists())
 
 
 if __name__ == "__main__":
