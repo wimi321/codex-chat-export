@@ -1,2 +1,0 @@
-[console_scripts]
-codex-chat-export = codex_chat_export:main

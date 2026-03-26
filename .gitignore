@@ -5,3 +5,5 @@ dist/
 build/
 exports/
 .venv*/
+
+src/codex_chat_export.egg-info/
