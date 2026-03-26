@@ -1,0 +1,6 @@
+interface:
+  display_name: "Codex Chat Export"
+  short_description: "Export Codex conversations to Markdown or JSON"
+  default_prompt: "Use $codex-chat-export to list and export my Codex conversations."
+policy:
+  allow_implicit_invocation: true
